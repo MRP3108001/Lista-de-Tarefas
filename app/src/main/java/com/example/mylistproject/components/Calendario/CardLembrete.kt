@@ -1,0 +1,53 @@
+package com.example.mylistproject.components.calendario
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.example.mylistproject.view.Lembrete
+
+@Composable
+fun CardLembrete(lembrete: Lembrete) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            Text(
+                text = lembrete.titulo,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = lembrete.descricao,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Justify
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Data agendada: ${lembrete.dataHora}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            lembrete.dataConclusao?.let {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Concluído em: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+        }
+    }
+}
