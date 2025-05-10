@@ -28,7 +28,7 @@ fun Login(navController: NavController) {
             .padding(24.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Login", style = MaterialTheme.typography.headlineMedium)
+        Text("Login - Iteração 2", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -52,6 +52,7 @@ fun Login(navController: NavController) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = {
+            println("Tentando login com usuário: $usuario")
             scope.launch {
                 val autenticado = dataStore.autenticar(usuario, senha)
                 if (autenticado) {

@@ -1,4 +1,5 @@
 package com.example.mylistproject.view
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,7 +16,6 @@ import com.example.mylistproject.ui.theme.MyColors
 import com.example.mylistproject.components.Topo
 import com.example.mylistproject.components.BottomNavBar
 
-
 @Composable
 fun BemVindo(navController: NavController) {
     Scaffold(
@@ -30,13 +30,22 @@ fun BemVindo(navController: NavController) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = "Tela Bem-vindo - Iteração 2",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 BotaoMenu(
                     texto = "Lembretes",
                     icone = Icons.Default.Warning
-                ) { navController.navigate("lembretes") }
+                ) {
+                    println("Navegando para Lembretes - Iteração 2")
+                    navController.navigate("lembretes")
+                }
 
                 BotaoMenu(
                     texto = "Calendário",
