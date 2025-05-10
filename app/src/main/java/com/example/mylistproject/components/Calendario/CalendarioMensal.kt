@@ -5,8 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,7 +51,7 @@ fun CalendarioMensal(
                     mesAtual -= 1
                 }
             }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Mês anterior")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Mês anterior")
             }
 
             val nomeMes = SimpleDateFormat("MMMM yyyy", Locale("pt", "BR")).format(
@@ -68,7 +68,7 @@ fun CalendarioMensal(
                     mesAtual += 1
                 }
             }) {
-                Icon(Icons.Default.ArrowForward, contentDescription = "Próximo mês")
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Próximo mês")
             }
         }
 
@@ -105,13 +105,19 @@ fun CalendarioMensal(
                                     .aspectRatio(1f)
                             )
                         } else {
-                            val dataFormatada = String.format("%02d/%02d/%04d", dia, mesAtual + 1, anoAtual)
+                            val dataFormatada = String.format(
+                                Locale.getDefault(),
+                                "%02d/%02d/%04d",
+                                dia,
+                                mesAtual + 1,
+                                anoAtual
+                            )
                             val possuiLembrete = lembretes.any {
                                 try {
                                     val dataLembrete = sdf.parse(it.dataHora.split(" ")[0].trim())
                                     val dataAtual = sdf.parse(dataFormatada)
                                     dataLembrete == dataAtual
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     false
                                 }
                             }

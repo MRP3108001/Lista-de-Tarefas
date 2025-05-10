@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -44,10 +43,11 @@ fun Calendario(navController: NavController) {
                     val date = sdf.parse(data)
                     val today = sdf.parse(hoje)
                     date != null && today != null && !date.before(today)
-                } catch (e: Exception) {
-                    false
-                }
-            }
+                } catch (_: Exception) {
+            false
+        }
+
+        }
         }
     }
 
