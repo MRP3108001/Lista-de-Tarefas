@@ -1,221 +1,125 @@
+
 package com.example.mylistproject.view
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.mylistproject.components.*
+import com.example.mylistproject.components.BottomNavBar
+import com.example.mylistproject.components.Topo
+import com.example.mylistproject.components.DialogAdicionarLembrete
+import com.example.mylistproject.components.DialogEditarLembrete
+import com.example.mylistproject.components.CaixaSelecaoRedonda
 import com.example.mylistproject.storage.DataStoreManager
-import com.example.mylistproject.ui.theme.MyColors
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.material3.MaterialTheme.typography
-
-data class Lembrete(
-    val titulo: String,
-    val descricao: String,
-    val dataHora: String,
-    var concluido: Boolean = false,
-    val dataConclusao: String? = null
-)
 
 @Composable
 fun Lembretes(navController: NavController) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val dataStore = remember { DataStoreManager(context) }
 
-    val todosLembretes = remember { mutableStateListOf<Lembrete>() }
-    var mostrarDialogAdicionar by remember { mutableStateOf(false) }
-    var indiceEdicao by remember { mutableStateOf<Int?>(null) }
+    var usuarioLogado by remember { mutableStateOf<String?>(null) }
+    var lembretes by remember { mutableStateOf<List<LembreteSerializable>>(emptyList()) }
+    var exibirDialogoAdicionar by remember { mutableStateOf(false) }
+    var lembreteSelecionado by remember { mutableStateOf<LembreteSerializable?>(null) }
+    var lembreteParaExcluir by remember { mutableStateOf<LembreteSerializable?>(null) }
 
-    val hoje = remember {
-        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-    }
-
-    // carregar todos os lembretes ao iniciar
     LaunchedEffect(Unit) {
-        val salvos = dataStore.carregarLembretes()
-        todosLembretes.clear()
-        todosLembretes.addAll(salvos.map {
-            Lembrete(it.titulo, it.descricao, it.dataHora, it.concluido, it.dataConclusao)
-        })
-    }
-
-    // salvar automaticamente
-    LaunchedEffect(todosLembretes) {
-        snapshotFlow { todosLembretes.toList() }.collect { lista ->
-            dataStore.salvarLembretes(lista.map {
-                LembreteSerializable(it.titulo, it.descricao, it.dataHora, it.concluido, it.dataConclusao)
-            })
+        usuarioLogado = dataStore.obterUsuarioLogado()
+        usuarioLogado?.let {
+            lembretes = dataStore.carregarLembretes(it)
         }
-    }
-
-    val lembretesHoje = todosLembretes.filter {
-        it.dataHora.startsWith(hoje)
     }
 
     Scaffold(
         topBar = { Topo("Lembretes") },
         bottomBar = { BottomNavBar(navController) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { mostrarDialogAdicionar = true },
-                containerColor = MyColors.BotaoPrincipal
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Adicionar tarefa")
+            FloatingActionButton(onClick = { exibirDialogoAdicionar = true }) {
+                Text("+")
             }
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
+                .padding(16.dp)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 72.dp)
-            ) {
-                if (lembretesHoje.isEmpty()) {
-                    item {
-                        Text(
-                            text = "Nenhum lembrete para hoje.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(24.dp)
-                        )
-                    }
-                }
+            if (lembretes.isEmpty()) {
+                Text("Nenhum lembrete disponível.")
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(lembretes) { lembrete ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(text = lembrete.titulo, style = MaterialTheme.typography.titleMedium)
 
-                itemsIndexed(lembretesHoje) { indexVisivel, lembrete ->
-                    // Localizar o índice real na lista total
-                    val index = todosLembretes.indexOfFirst {
-                        it.titulo == lembrete.titulo &&
-                                it.descricao == lembrete.descricao &&
-                                it.dataHora == lembrete.dataHora
-                    }
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CaixaSelecaoRedonda(
-                                    checked = lembrete.concluido,
-                                    onCheckedChange = { novoValor ->
-                                        val dataConclusao = if (novoValor)
-                                            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-                                        else null
-
-                                        todosLembretes[index] = lembrete.copy(
-                                            concluido = novoValor,
-                                            dataConclusao = dataConclusao
-                                        )
-                                    }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = lembrete.titulo,
-                                    style = typography.titleMedium,
-                                    modifier = Modifier.padding(start = 8.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = lembrete.descricao,
-                                style = typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 40.dp),
-                                textAlign = TextAlign.Justify
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = "Data: ${lembrete.dataHora}",
-                                style = typography.bodySmall,
-                                modifier = Modifier.padding(start = 40.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-
-                            lembrete.dataConclusao?.let {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Concluído em: $it",
-                                    style = typography.bodySmall,
-                                    modifier = Modifier.padding(start = 40.dp),
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier
-                                    .padding(start = 40.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(
-                                        onClick = {
-                                            val novoValor = !lembrete.concluido
-                                            val dataConclusao = if (novoValor)
-                                                SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-                                            else null
-
-                                            todosLembretes[index] = lembrete.copy(
-                                                concluido = novoValor,
-                                                dataConclusao = dataConclusao
+                                    CaixaSelecaoRedonda(
+                                        checked = lembrete.concluido,
+                                        onCheckedChange = {
+                                            val atualizado = lembrete.copy(
+                                                concluido = it,
+                                                dataConclusao = if (it)
+                                                    SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+                                                else null
                                             )
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = MyColors.BotaoPrincipal),
-                                        modifier = Modifier.height(36.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                                    ) {
-                                        Text(
-                                            text = if (lembrete.concluido) "Definir como 'Não Concluído'" else "Concluir",
-                                            style = typography.labelSmall
-                                        )
-                                    }
 
-                                    IconButton(onClick = {
-                                        indiceEdicao = index
-                                    }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = "Editar",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
+                                            scope.launch {
+                                                val novaLista = lembretes.map { l ->
+                                                    if (l == lembrete) atualizado else l
+                                                }
+                                                lembretes = novaLista
+                                                usuarioLogado?.let { user ->
+                                                    dataStore.salvarLembretes(user, novaLista)
+                                                    lembretes = dataStore.carregarLembretes(user)
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
 
-                                    IconButton(onClick = {
-                                        todosLembretes.removeAt(index)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = lembrete.descricao, style = MaterialTheme.typography.bodyMedium)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = "Data: ${lembrete.dataHora}", style = MaterialTheme.typography.bodySmall)
+
+                                lembrete.dataConclusao?.let { data ->
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Concluído em: $data",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                                    TextButton(onClick = { lembreteSelecionado = lembrete }) {
+                                        Text("Editar")
+                                    }
+                                    TextButton(onClick = {
+                                        lembreteParaExcluir = lembrete
                                     }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Excluir",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
+                                        Text("Excluir")
                                     }
                                 }
                             }
@@ -226,30 +130,69 @@ fun Lembretes(navController: NavController) {
         }
     }
 
-    if (mostrarDialogAdicionar) {
+    if (exibirDialogoAdicionar) {
         DialogAdicionarLembrete(
-            onDismiss = { mostrarDialogAdicionar = false },
+            onDismiss = { exibirDialogoAdicionar = false },
             onConfirm = { titulo, descricao, dataHora ->
-                todosLembretes.add(Lembrete(titulo, descricao, dataHora))
-                mostrarDialogAdicionar = false
+                val novo = LembreteSerializable(
+                    titulo = titulo,
+                    descricao = descricao,
+                    dataHora = dataHora
+                )
+                scope.launch {
+                    lembretes = lembretes + novo
+                    usuarioLogado?.let { user ->
+                        dataStore.salvarLembretes(user, lembretes)
+                        lembretes = dataStore.carregarLembretes(user)
+                    }
+                    exibirDialogoAdicionar = false
+                }
             }
         )
     }
 
-    indiceEdicao?.let { index ->
-        val lembrete = todosLembretes[index]
+    lembreteSelecionado?.let { lembrete ->
         DialogEditarLembrete(
-            tituloOriginal = lembrete.titulo,
-            descricaoOriginal = lembrete.descricao,
-            dataHoraOriginal = lembrete.dataHora,
-            onDismiss = { indiceEdicao = null },
-            onConfirm = { novoTitulo, novaDescricao, novaDataHora ->
-                todosLembretes[index] = lembrete.copy(
-                    titulo = novoTitulo,
-                    descricao = novaDescricao,
-                    dataHora = novaDataHora
-                )
-                indiceEdicao = null
+            lembrete = lembrete,
+            onDismiss = { lembreteSelecionado = null },
+            onConfirm = { atualizado ->
+                scope.launch {
+                    lembretes = lembretes.map {
+                        if (it == lembrete) atualizado else it
+                    }
+                    usuarioLogado?.let { user ->
+                        dataStore.salvarLembretes(user, lembretes)
+                        lembretes = dataStore.carregarLembretes(user)
+                    }
+                    lembreteSelecionado = null
+                }
+            }
+        )
+    }
+
+    lembreteParaExcluir?.let { lembrete ->
+        AlertDialog(
+            onDismissRequest = { lembreteParaExcluir = null },
+            title = { Text("Excluir Lembrete") },
+            text = { Text("Tem certeza que deseja excluir este lembrete?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        lembretes = lembretes.filter { it != lembrete }
+                        usuarioLogado?.let { user ->
+                            dataStore.salvarLembretes(user, lembretes)
+                            lembretes = dataStore.carregarLembretes(user)
+                        }
+                        lembreteParaExcluir = null
+                    }
+                }) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { lembreteParaExcluir = null }) {
+                    Text("Cancelar")
+                }
             }
         )
     }

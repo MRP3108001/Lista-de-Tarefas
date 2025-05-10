@@ -5,18 +5,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.mylistproject.view.LembreteSerializable
 
 @Composable
 fun DialogEditarLembrete(
-    tituloOriginal: String,
-    descricaoOriginal: String,
-    dataHoraOriginal: String,
+    lembrete: LembreteSerializable,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String) -> Unit
+    onConfirm: (LembreteSerializable) -> Unit
 ) {
-    var titulo by remember { mutableStateOf(tituloOriginal) }
-    var descricao by remember { mutableStateOf(descricaoOriginal) }
-    var dataHora by remember { mutableStateOf(dataHoraOriginal) }
+    var titulo by remember { mutableStateOf(lembrete.titulo) }
+    var descricao by remember { mutableStateOf(lembrete.descricao) }
+    var dataHora by remember { mutableStateOf(lembrete.dataHora) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -24,8 +23,13 @@ fun DialogEditarLembrete(
             Button(
                 onClick = {
                     if (titulo.isNotBlank() && dataHora.isNotBlank()) {
-                        onConfirm(titulo, descricao, dataHora)
-                        // campos não precisam ser limpos, pois o dialog será fechado
+                        onConfirm(
+                            lembrete.copy(
+                                titulo = titulo,
+                                descricao = descricao,
+                                dataHora = dataHora
+                            )
+                        )
                     }
                 }
             ) {

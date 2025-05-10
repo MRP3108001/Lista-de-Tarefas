@@ -11,23 +11,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.mylistproject.view.Lembrete
+import com.example.mylistproject.view.LembreteSerializable
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun CalendarioMensal(
-    lembretes: List<Lembrete>,
+    lembretes: List<LembreteSerializable>,
     onDateSelected: (String) -> Unit
 ) {
     val calendar = remember { Calendar.getInstance() }
     var mesAtual by remember { mutableStateOf(calendar.get(Calendar.MONTH)) }
     var anoAtual by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
 
-    // Calcula quantos dias no mês atual
+    val sdf = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+
     val diasNoMes = remember(mesAtual, anoAtual) {
         calendar.set(Calendar.MONTH, mesAtual)
         calendar.set(Calendar.YEAR, anoAtual)
@@ -107,7 +107,13 @@ fun CalendarioMensal(
                         } else {
                             val dataFormatada = String.format("%02d/%02d/%04d", dia, mesAtual + 1, anoAtual)
                             val possuiLembrete = lembretes.any {
-                                it.dataHora.startsWith(dataFormatada)
+                                try {
+                                    val dataLembrete = sdf.parse(it.dataHora.split(" ")[0].trim())
+                                    val dataAtual = sdf.parse(dataFormatada)
+                                    dataLembrete == dataAtual
+                                } catch (e: Exception) {
+                                    false
+                                }
                             }
 
                             Box(

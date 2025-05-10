@@ -14,8 +14,8 @@ import com.example.mylistproject.components.BottomNavBar
 import com.example.mylistproject.components.Topo
 import com.example.mylistproject.components.calendario.CalendarioMensal
 import com.example.mylistproject.components.calendario.CardLembrete
+import com.example.mylistproject.components.DialogEditarLembrete
 import com.example.mylistproject.storage.DataStoreManager
-import com.example.mylistproject.ui.theme.MyColors
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,37 +26,33 @@ fun Calendario(navController: NavController) {
     val scope = rememberCoroutineScope()
     val dataStore = remember { DataStoreManager(context) }
 
-    var lembretes by remember { mutableStateOf<List<Lembrete>>(emptyList()) }
+    var usuarioLogado by remember { mutableStateOf<String?>(null) }
+    var lembretes by remember { mutableStateOf<List<LembreteSerializable>>(emptyList()) }
     var dataSelecionada by remember { mutableStateOf("") }
+    var lembreteParaEditar by remember { mutableStateOf<LembreteSerializable?>(null) }
+    var lembreteParaExcluir by remember { mutableStateOf<LembreteSerializable?>(null) }
 
-    // carregar lembretes do dia atual em diante
     LaunchedEffect(Unit) {
-        val salvos = dataStore.carregarLembretes()
-        val hoje = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-
-        lembretes = salvos.map {
-            Lembrete(
-                it.titulo,
-                it.descricao,
-                it.dataHora,
-                it.concluido,
-                it.dataConclusao
-            )
-        }.filter {
-            try {
-                val data = it.dataHora.split(" ")[0]
-                val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                val date = sdf.parse(data)
-                val today = sdf.parse(hoje)
-                date != null && today != null && !date.before(today)
-            } catch (e: Exception) {
-                false
+        usuarioLogado = dataStore.obterUsuarioLogado()
+        usuarioLogado?.let {
+            val salvos = dataStore.carregarLembretes(it)
+            val hoje = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+            lembretes = salvos.filter { lembrete ->
+                try {
+                    val data = lembrete.dataHora.split(" ")[0]
+                    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                    val date = sdf.parse(data)
+                    val today = sdf.parse(hoje)
+                    date != null && today != null && !date.before(today)
+                } catch (e: Exception) {
+                    false
+                }
             }
         }
     }
 
     val lembretesDoDiaSelecionado = lembretes.filter {
-        it.dataHora.startsWith(dataSelecionada)
+        it.dataHora.take(10).trim() == dataSelecionada.trim()
     }
 
     Scaffold(
@@ -71,9 +67,7 @@ fun Calendario(navController: NavController) {
         ) {
             CalendarioMensal(
                 lembretes = lembretes,
-                onDateSelected = { data ->
-                    dataSelecionada = data
-                }
+                onDateSelected = { dataSelecionada = it }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -90,11 +84,59 @@ fun Calendario(navController: NavController) {
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(lembretesDoDiaSelecionado) { lembrete ->
-                            CardLembrete(lembrete)
+                            CardLembrete(
+                                lembrete = lembrete,
+                                onEditar = { lembreteParaEditar = it },
+                                onExcluir = { lembreteParaExcluir = it }
+                            )
                         }
                     }
                 }
             }
+        }
+
+        lembreteParaEditar?.let { lembrete ->
+            DialogEditarLembrete(
+                lembrete = lembrete,
+                onDismiss = { lembreteParaEditar = null },
+                onConfirm = { atualizado ->
+                    scope.launch {
+                        lembretes = lembretes.map {
+                            if (it == lembrete) atualizado else it
+                        }
+                        usuarioLogado?.let { user ->
+                            dataStore.salvarLembretes(user, lembretes)
+                        }
+                        lembreteParaEditar = null
+                    }
+                }
+            )
+        }
+
+        lembreteParaExcluir?.let { lembrete ->
+            AlertDialog(
+                onDismissRequest = { lembreteParaExcluir = null },
+                title = { Text("Excluir Lembrete") },
+                text = { Text("Deseja realmente excluir este lembrete?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        scope.launch {
+                            lembretes = lembretes.filter { it != lembrete }
+                            usuarioLogado?.let { user ->
+                                dataStore.salvarLembretes(user, lembretes)
+                            }
+                            lembreteParaExcluir = null
+                        }
+                    }) {
+                        Text("Excluir")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { lembreteParaExcluir = null }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }

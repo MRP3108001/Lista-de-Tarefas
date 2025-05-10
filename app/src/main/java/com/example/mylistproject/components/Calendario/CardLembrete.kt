@@ -6,18 +6,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.mylistproject.view.Lembrete
+import com.example.mylistproject.view.LembreteSerializable
 
 @Composable
-fun CardLembrete(lembrete: Lembrete) {
+fun CardLembrete(
+    lembrete: LembreteSerializable,
+    onEditar: (LembreteSerializable) -> Unit,
+    onExcluir: (LembreteSerializable) -> Unit
+) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-
             Text(
                 text = lembrete.titulo,
                 style = MaterialTheme.typography.titleMedium
@@ -47,6 +49,17 @@ fun CardLembrete(lembrete: Lembrete) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { onEditar(lembrete) }) {
+                    Text("Editar")
+                }
+                TextButton(onClick = { onExcluir(lembrete) }) {
+                    Text("Excluir")
+                }
             }
         }
     }
