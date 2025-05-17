@@ -1,8 +1,8 @@
 package com.example.mylistproject.view
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -34,26 +34,18 @@ fun Calendario(navController: NavController) {
     LaunchedEffect(Unit) {
         usuarioLogado = dataStore.obterUsuarioLogado()
         usuarioLogado?.let {
-            val salvos = dataStore.carregarLembretes(it)
-            val hoje = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-            lembretes = salvos.filter { lembrete ->
-                try {
-                    val data = lembrete.dataHora.split(" ")[0]
-                    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                    val date = sdf.parse(data)
-                    val today = sdf.parse(hoje)
-                    date != null && today != null && !date.before(today)
-                } catch (_: Exception) {
-            false
-        }
-
-        }
+            lembretes = dataStore.carregarLembretes(it)
         }
     }
 
     val lembretesDoDiaSelecionado = lembretes.filter {
         it.dataHora.take(10).trim() == dataSelecionada.trim()
     }
+
+    val lembretesPendentes = lembretesDoDiaSelecionado.filter { !it.concluido }
+    val lembretesConcluidos = lembretesDoDiaSelecionado.filter { it.concluido }
+
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = { Topo("Calendário") },
@@ -64,6 +56,7 @@ fun Calendario(navController: NavController) {
                 .padding(padding)
                 .fillMaxSize()
                 .padding(16.dp)
+                .verticalScroll(scrollState)
         ) {
             CalendarioMensal(
                 lembretes = lembretes,
@@ -82,13 +75,58 @@ fun Calendario(navController: NavController) {
                 if (lembretesDoDiaSelecionado.isEmpty()) {
                     Text("Nenhum lembrete para esta data.")
                 } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(lembretesDoDiaSelecionado) { lembrete ->
+                    if (lembretesPendentes.isNotEmpty()) {
+                        Text("Pendentes", style = MaterialTheme.typography.titleSmall)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        lembretesPendentes.forEach { lembrete ->
                             CardLembrete(
                                 lembrete = lembrete,
+                                onConcluir = { concluido ->
+                                    val atualizado = lembrete.copy(
+                                        concluido = concluido,
+                                        dataConclusao = if (concluido)
+                                            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+                                        else null
+                                    )
+                                    scope.launch {
+                                        lembretes = lembretes.map { if (it == lembrete) atualizado else it }
+                                        usuarioLogado?.let { user ->
+                                            dataStore.salvarLembretes(user, lembretes)
+                                        }
+                                    }
+                                },
                                 onEditar = { lembreteParaEditar = it },
                                 onExcluir = { lembreteParaExcluir = it }
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+
+                    if (lembretesConcluidos.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Concluídos", style = MaterialTheme.typography.titleSmall)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        lembretesConcluidos.forEach { lembrete ->
+                            CardLembrete(
+                                lembrete = lembrete,
+                                onConcluir = { concluido ->
+                                    val atualizado = lembrete.copy(
+                                        concluido = concluido,
+                                        dataConclusao = if (concluido)
+                                            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+                                        else null
+                                    )
+                                    scope.launch {
+                                        lembretes = lembretes.map { if (it == lembrete) atualizado else it }
+                                        usuarioLogado?.let { user ->
+                                            dataStore.salvarLembretes(user, lembretes)
+                                        }
+                                    }
+                                },
+                                onEditar = { lembreteParaEditar = it },
+                                onExcluir = { lembreteParaExcluir = it }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }
